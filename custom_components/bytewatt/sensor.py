@@ -1,10 +1,14 @@
 """Sensor platform for Byte-Watt integration."""
 import logging
-from typing import Callable, Dict, Optional, Any
-from datetime import datetime
+from typing import Optional
 
-from homeassistant.components.sensor import SensorEntity, SensorStateClass
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import PERCENTAGE, UnitOfEnergy, UnitOfPower
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.update_coordinator import (
@@ -59,9 +63,9 @@ async def async_setup_entry(
             entry, 
             SENSOR_SOC, 
             "Battery Percentage", 
-            "battery", 
+            SensorDeviceClass.BATTERY,
             "soc", 
-            "%", 
+            PERCENTAGE,
             "mdi:battery"
         ),
         ByteWattSensor(
@@ -69,9 +73,9 @@ async def async_setup_entry(
             entry, 
             SENSOR_GRID_CONSUMPTION, 
             "Grid Consumption", 
-            "power", 
+            SensorDeviceClass.POWER,
             "pgrid", 
-            "W", 
+            UnitOfPower.WATT,
             "mdi:transmission-tower"
         ),
         ByteWattSensor(
@@ -79,9 +83,9 @@ async def async_setup_entry(
             entry, 
             SENSOR_HOUSE_CONSUMPTION, 
             "House Consumption", 
-            "power", 
+            SensorDeviceClass.POWER,
             "pload", 
-            "W", 
+            UnitOfPower.WATT,
             "mdi:home-lightning-bolt"
         ),
         ByteWattSensor(
@@ -89,9 +93,9 @@ async def async_setup_entry(
             entry, 
             SENSOR_BATTERY_POWER, 
             "Battery Power", 
-            "power", 
+            SensorDeviceClass.POWER,
             "pbat", 
-            "W", 
+            UnitOfPower.WATT,
             "mdi:battery-charging"
         ),
         ByteWattSensor(
@@ -99,9 +103,9 @@ async def async_setup_entry(
             entry, 
             SENSOR_PV, 
             "PV Power", 
-            "power", 
+            SensorDeviceClass.POWER,
             "ppv", 
-            "W", 
+            UnitOfPower.WATT,
             "mdi:solar-power"
         ),
         ByteWattLastUpdateSensor(
@@ -109,7 +113,7 @@ async def async_setup_entry(
             entry, 
             SENSOR_LAST_UPDATE, 
             "Last Update", 
-            "timestamp", 
+            SensorDeviceClass.TIMESTAMP,
             "", 
             "mdi:clock-outline",
             entity_category=EntityCategory.DIAGNOSTIC
@@ -123,9 +127,9 @@ async def async_setup_entry(
             entry, 
             SENSOR_TOTAL_SOLAR, 
             "Total Solar Generation", 
-            "energy",  # Changed to "energy" for Energy Dashboard
+            SensorDeviceClass.ENERGY,
             "Total_Solar_Generation", 
-            "kWh", 
+            UnitOfEnergy.KILO_WATT_HOUR,
             "mdi:solar-power"
         ),
         ByteWattGridSensor(
@@ -133,9 +137,9 @@ async def async_setup_entry(
             entry, 
             SENSOR_TOTAL_FEED_IN, 
             "Total Feed In", 
-            "energy",  # Changed to "energy" for Energy Dashboard
+            SensorDeviceClass.ENERGY,
             "Total_Feed_In", 
-            "kWh", 
+            UnitOfEnergy.KILO_WATT_HOUR,
             "mdi:transmission-tower-export"
         ),
         ByteWattGridSensor(
@@ -143,9 +147,9 @@ async def async_setup_entry(
             entry, 
             SENSOR_TOTAL_BATTERY_CHARGE, 
             "Total Battery Charge", 
-            "energy",  # Changed to "energy" for Energy Dashboard
+            SensorDeviceClass.ENERGY,
             "Total_Battery_Charge", 
-            "kWh", 
+            UnitOfEnergy.KILO_WATT_HOUR,
             "mdi:battery-charging"
         ),
         ByteWattGridSensor(
@@ -153,9 +157,9 @@ async def async_setup_entry(
             entry,
             SENSOR_TOTAL_BATTERY_DISCHARGE,
             "Total Battery Discharge",
-            "energy",
+            SensorDeviceClass.ENERGY,
             "Total_Battery_Discharge",
-            "kWh",
+            UnitOfEnergy.KILO_WATT_HOUR,
             "mdi:battery-minus"
         ),
         ByteWattGridSensor(
@@ -163,9 +167,9 @@ async def async_setup_entry(
             entry, 
             SENSOR_PV_POWER_HOUSE, 
             "PV Power to House", 
-            "energy",  # Changed to "energy" for Energy Dashboard
+            SensorDeviceClass.ENERGY,
             "PV_Power_House", 
-            "kWh", 
+            UnitOfEnergy.KILO_WATT_HOUR,
             "mdi:solar-power-variant"
         ),
         ByteWattGridSensor(
@@ -173,9 +177,9 @@ async def async_setup_entry(
             entry, 
             SENSOR_PV_CHARGING_BATTERY, 
             "PV Charging Battery", 
-            "energy",  # Changed to "energy" for Energy Dashboard
+            SensorDeviceClass.ENERGY,
             "PV_Charging_Battery", 
-            "kWh", 
+            UnitOfEnergy.KILO_WATT_HOUR,
             "mdi:solar-power-variant-outline"
         ),
         ByteWattGridSensor(
@@ -183,9 +187,9 @@ async def async_setup_entry(
             entry, 
             SENSOR_TOTAL_HOUSE_CONSUMPTION, 
             "Total House Consumption", 
-            "energy",  # Changed to "energy" for Energy Dashboard
+            SensorDeviceClass.ENERGY,
             "Total_House_Consumption", 
-            "kWh", 
+            UnitOfEnergy.KILO_WATT_HOUR,
             "mdi:home-lightning-bolt"
         ),
         ByteWattGridSensor(
@@ -193,9 +197,9 @@ async def async_setup_entry(
             entry, 
             SENSOR_GRID_BATTERY_CHARGE, 
             "Grid Based Battery Charge", 
-            "energy",  # Changed to "energy" for Energy Dashboard
+            SensorDeviceClass.ENERGY,
             "Grid_Based_Battery_Charge", 
-            "kWh", 
+            UnitOfEnergy.KILO_WATT_HOUR,
             "mdi:transmission-tower-import"
         ),
         ByteWattGridSensor(
@@ -203,9 +207,9 @@ async def async_setup_entry(
             entry, 
             SENSOR_GRID_POWER_CONSUMPTION, 
             "Grid Power Consumption", 
-            "energy",  # Changed to "energy" for Energy Dashboard
+            SensorDeviceClass.ENERGY,
             "Grid_Power_Consumption", 
-            "kWh", 
+            UnitOfEnergy.KILO_WATT_HOUR,
             "mdi:transmission-tower"
         ),
     ]
@@ -218,9 +222,9 @@ async def async_setup_entry(
             entry, 
             SENSOR_PV_GENERATED_TODAY, 
             "PV Generated Today", 
-            "energy",
+            SensorDeviceClass.ENERGY,
             "PV_Generated_Today", 
-            "kWh", 
+            UnitOfEnergy.KILO_WATT_HOUR,
             "mdi:solar-power"
         ),
         ByteWattGridSensor(
@@ -228,9 +232,9 @@ async def async_setup_entry(
             entry, 
             SENSOR_CONSUMED_TODAY, 
             "Consumed Today", 
-            "energy",
+            SensorDeviceClass.ENERGY,
             "Consumed_Today", 
-            "kWh", 
+            UnitOfEnergy.KILO_WATT_HOUR,
             "mdi:home-lightning-bolt"
         ),
         ByteWattGridSensor(
@@ -238,9 +242,9 @@ async def async_setup_entry(
             entry, 
             SENSOR_FEED_IN_TODAY, 
             "Feed In Today", 
-            "energy",
+            SensorDeviceClass.ENERGY,
             "Feed_In_Today", 
-            "kWh", 
+            UnitOfEnergy.KILO_WATT_HOUR,
             "mdi:transmission-tower-export"
         ),
         ByteWattGridSensor(
@@ -248,9 +252,9 @@ async def async_setup_entry(
             entry, 
             SENSOR_GRID_IMPORT_TODAY, 
             "Grid Import Today", 
-            "energy",
+            SensorDeviceClass.ENERGY,
             "Grid_Import_Today", 
-            "kWh", 
+            UnitOfEnergy.KILO_WATT_HOUR,
             "mdi:transmission-tower-import"
         ),
         ByteWattGridSensor(
@@ -258,9 +262,9 @@ async def async_setup_entry(
             entry, 
             SENSOR_BATTERY_CHARGED_TODAY, 
             "Battery Charged Today", 
-            "energy",
+            SensorDeviceClass.ENERGY,
             "Battery_Charged_Today", 
-            "kWh", 
+            UnitOfEnergy.KILO_WATT_HOUR,
             "mdi:battery-plus"
         ),
         ByteWattGridSensor(
@@ -268,9 +272,9 @@ async def async_setup_entry(
             entry, 
             SENSOR_BATTERY_DISCHARGED_TODAY, 
             "Battery Discharged Today", 
-            "energy",
+            SensorDeviceClass.ENERGY,
             "Battery_Discharged_Today", 
-            "kWh", 
+            UnitOfEnergy.KILO_WATT_HOUR,
             "mdi:battery-minus"
         ),
         ByteWattSensor(
@@ -280,7 +284,7 @@ async def async_setup_entry(
             "Self Consumption", 
             None,  # No device class for percentage
             "Self_Consumption", 
-            "%", 
+            PERCENTAGE,
             "mdi:home-battery"
         ),
         ByteWattSensor(
@@ -290,7 +294,7 @@ async def async_setup_entry(
             "Self Sufficiency", 
             None,  # No device class for percentage
             "Self_Sufficiency", 
-            "%", 
+            PERCENTAGE,
             "mdi:home-battery-outline"
         ),
         ByteWattSensor(
@@ -327,7 +331,7 @@ class ByteWattSensor(CoordinatorEntity, SensorEntity):
         config_entry: ConfigEntry,
         sensor_type: str,
         name: str,
-        device_class: str,
+        device_class: Optional[SensorDeviceClass],
         attribute: str,
         unit: str,
         icon: str,
@@ -341,12 +345,17 @@ class ByteWattSensor(CoordinatorEntity, SensorEntity):
         self._attr_name = name
         self._attr_unique_id = f"{config_entry.entry_id}_{sensor_type}"
         self._attr_device_class = device_class
+        self._attr_state_class = None
         # HA forbids unit_of_measurement on certain device classes (e.g. timestamp);
         # treat the empty string as None to silence the deprecation warning that
         # will become a hard validation error in a future HA release.
         self._attr_native_unit_of_measurement = unit if unit else None
         self._attr_icon = icon
         self._attr_entity_category = entity_category
+        if device_class == SensorDeviceClass.POWER:
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+        elif device_class == SensorDeviceClass.BATTERY:
+            self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
     def device_info(self):
@@ -382,12 +391,12 @@ class ByteWattSensor(CoordinatorEntity, SensorEntity):
                 )
                 return None
                 
-            # Return the value, converting string values to float if needed for numerical sensors
-            if self._attr_device_class == "power" and isinstance(value, (str, int, float)):
+            # Return numeric values for sensors that feed HA statistics.
+            if self._attr_state_class is not None and isinstance(value, (str, int, float)):
                 try:
                     return float(value)
                 except (ValueError, TypeError):
-                    return value
+                    return None
             return value
         except Exception as ex:
             _LOGGER.error(f"Error getting sensor state for {self._attr_name}: {ex}")
@@ -421,8 +430,8 @@ class ByteWattGridSensor(ByteWattSensor):
             icon,
             entity_category
         )
-        # Add state_class for energy sensors (kWh)
-        if unit == "kWh":
+        # Energy Dashboard entities need long-term statistics metadata.
+        if device_class == SensorDeviceClass.ENERGY:
             self._attr_state_class = SensorStateClass.TOTAL_INCREASING
 
     @property
@@ -438,7 +447,13 @@ class ByteWattGridSensor(ByteWattSensor):
             
             # Handle special case for energy metrics which may be in a different format
             if self._attribute in battery_data:
-                return battery_data.get(self._attribute)
+                value = battery_data.get(self._attribute)
+                if isinstance(value, (str, int, float)):
+                    try:
+                        return float(value)
+                    except (ValueError, TypeError):
+                        return None
+                return value
             
             # If data isn't available, we'll log it at debug level
             _LOGGER.debug(f"Grid sensor {self._attribute} data not found in battery response")
@@ -500,5 +515,3 @@ class ByteWattLastUpdateSensor(ByteWattSensor):
     def available(self) -> bool:
         """Return if entity is available."""
         return hasattr(self.coordinator, '_last_successful_update') and self.coordinator._last_successful_update is not None
-
-

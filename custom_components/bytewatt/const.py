@@ -44,6 +44,8 @@ ATTR_START_CHARGE = "start_charge"
 ATTR_END_CHARGE = "end_charge"
 ATTR_MINIMUM_SOC = "minimum_soc"
 ATTR_CHARGE_CAP = "charge_cap"
+ATTR_CHARGE_POWER = "charge_power"
+ATTR_DISCHARGE_POWER = "discharge_power"
 ATTR_ENTRY_ID = "entry_id"
 
 # Sensor types

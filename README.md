@@ -59,6 +59,23 @@ Byte-Watt → ⋮ → Reconfigure.
 | `time`   | Charge Start/End, Discharge Start/End, Grid Feed-in Time1 Start/End |
 | `button` | **Submit Settings**, **Discard Pending Settings** |
 
+### Home Assistant Energy dashboard
+
+For Energy dashboard setup, use the cumulative kWh sensors rather than the
+instantaneous W sensors. `Battery Power` is useful for live views, but HA will
+not accept it as stored battery energy.
+
+Recommended Energy entities:
+
+| Energy setting | Byte-Watt sensor |
+|---|---|
+| Solar production | Total Solar Generation |
+| Grid consumption | Grid Power Consumption |
+| Return to grid | Total Feed In |
+| Battery energy going in | Total Battery Charge |
+| Battery energy going out | Total Battery Discharge |
+| Battery state of charge | Battery Percentage |
+
 ### Submit/Discard workflow
 
 Changing a switch / number / time entity **does not** immediately write to the
@@ -80,7 +97,8 @@ and submit immediately (no Submit button press needed for services):
 - `bytewatt.set_charge_cap` — set charge cap (1–100 %)
 - `bytewatt.set_discharge_start_time` / `set_discharge_time` — discharge window
 - `bytewatt.set_charge_start_time` / `set_charge_end_time` — charge window
-- `bytewatt.update_battery_settings` — set any combination in one call
+- `bytewatt.update_battery_settings` — set any combination in one call,
+  including charge/discharge power
 
 Grid Feed-in:
 

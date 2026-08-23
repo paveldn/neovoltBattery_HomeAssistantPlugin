@@ -226,6 +226,21 @@ def test_effective_battery_reads_from_cache(manager, populated_cache):
     assert manager.effective_battery("discharge_end_time") == "22:00"
 
 
+def test_effective_battery_uses_slot_defaults_when_api_returns_no_slots(manager):
+    manager._battery_cache = CycleStrategy.from_api_response({
+        "gridChargeCycle": 1,
+        "ctrDisCycle": 1,
+        "batUseCap": 10.0,
+        "dayChargeTimeList": [],
+        "dayDischargeTimeList": [],
+    })
+    assert manager.effective_battery("charge_cap") == 100.0
+    assert manager.effective_battery("charge_start_time") == "00:00"
+    assert manager.effective_battery("charge_power") == 10000
+    assert manager.effective_battery("discharge_start_time") == "00:00"
+    assert manager.effective_battery("discharge_power") == 10000
+
+
 def test_effective_battery_pending_overrides_cache(manager, populated_cache):
     manager._battery_cache = populated_cache
     manager.stage_battery("minimum_soc", 25)
@@ -248,11 +263,13 @@ def test_effective_feedin_slot_reads_cache(manager, populated_feedin_cache):
     assert manager.effective_feedin_slot(0, "start") == "10:00"
 
 
-def test_feedin_slot_available_reflects_cache_size(manager, populated_feedin_cache):
+def test_feedin_slot_available_once_feedin_cache_loaded(manager, populated_feedin_cache):
+    assert manager.feedin_slot_available(0) is False
     manager._feedin_cache = populated_feedin_cache
     assert manager.feedin_slot_available(0) is True
-    assert manager.feedin_slot_available(1) is False  # only one slot in cache
-    # But staging into slot 1 makes it available pre-submit.
+    # The submit payload builder can create missing slots on edit, so the UI
+    # should not disable later slots just because the API returned fewer rows.
+    assert manager.feedin_slot_available(1) is True
     manager.stage_feedin_slot(1, "power", 1000)
     assert manager.feedin_slot_available(1) is True
 
@@ -277,6 +294,24 @@ def test_build_battery_payload_applies_slot_times(manager, populated_cache):
     })
     assert merged.charge_slots[0].begin_time == "02:00"
     assert merged.discharge_slots[0].end_time == "23:00"
+
+
+def test_build_battery_payload_creates_missing_slots(manager):
+    manager._battery_cache = CycleStrategy.from_api_response({
+        "gridChargeCycle": 1,
+        "ctrDisCycle": 1,
+        "batUseCap": 10.0,
+        "dayChargeTimeList": [],
+        "dayDischargeTimeList": [],
+    })
+    merged = manager._build_battery_payload({
+        "charge_start_time": "02:00",
+        "discharge_start_time": "18:00",
+        "discharge_power": 5000,
+    })
+    assert merged.charge_slots[0].begin_time == "02:00"
+    assert merged.discharge_slots[0].begin_time == "18:00"
+    assert merged.discharge_slots[0].charge_power == 5000
 
 
 def test_build_battery_payload_raises_when_no_cache(manager):

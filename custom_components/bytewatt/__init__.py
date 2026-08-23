@@ -55,6 +55,8 @@ from .const import (
     ATTR_END_CHARGE,
     ATTR_MINIMUM_SOC,
     ATTR_CHARGE_CAP,
+    ATTR_CHARGE_POWER,
+    ATTR_DISCHARGE_POWER,
     SERVICE_SET_GRID_FEEDIN_ENABLED,
     SERVICE_SET_GRID_FEEDIN_CUTOFF_SOC,
     SERVICE_UPDATE_GRID_FEEDIN_SLOT,
@@ -444,6 +446,8 @@ def _register_services(hass: HomeAssistant) -> None:
             charge_end_time=call.data.get(ATTR_END_CHARGE),
             minimum_soc=call.data.get(ATTR_MINIMUM_SOC),
             charge_cap=call.data.get(ATTR_CHARGE_CAP),
+            charge_power=call.data.get(ATTR_CHARGE_POWER),
+            discharge_power=call.data.get(ATTR_DISCHARGE_POWER),
         )
 
     # ---------- Grid feed-in ----------
@@ -575,6 +579,7 @@ def _register_services(hass: HomeAssistant) -> None:
 
     _time_schema = vol.All(cv.string)
     _soc_schema = vol.All(vol.Coerce(int), vol.Range(min=1, max=100))
+    _battery_power_schema = vol.All(vol.Coerce(int), vol.Range(min=0, max=50000))
     _feedin_power_schema = vol.All(vol.Coerce(int), vol.Range(min=0, max=FEEDIN_MAX_POWER_W))
     _entry_id_opt = {vol.Optional(ATTR_ENTRY_ID): cv.string}
 
@@ -611,6 +616,8 @@ def _register_services(hass: HomeAssistant) -> None:
             vol.Optional(ATTR_END_CHARGE): _time_schema,
             vol.Optional(ATTR_MINIMUM_SOC): _soc_schema,
             vol.Optional(ATTR_CHARGE_CAP): _soc_schema,
+            vol.Optional(ATTR_CHARGE_POWER): _battery_power_schema,
+            vol.Optional(ATTR_DISCHARGE_POWER): _battery_power_schema,
             **_entry_id_opt,
         }),
     )

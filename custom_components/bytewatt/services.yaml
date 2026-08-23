@@ -225,6 +225,28 @@ update_battery_settings:
           max: 100
           step: 1
           unit_of_measurement: "%"
+    charge_power:
+      name: Charge Power
+      description: 0 to 50 000 W
+      example: 5000
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 50000
+          step: 100
+          unit_of_measurement: "W"
+    discharge_power:
+      name: Discharge Power
+      description: 0 to 50 000 W
+      example: 5000
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 50000
+          step: 100
+          unit_of_measurement: "W"
     entry_id:
       name: Integration ID
       description: Required only if multiple accounts are configured.

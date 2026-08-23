@@ -46,6 +46,23 @@ from .utilities.diagnostic_service import DiagnosticService
 
 _LOGGER = logging.getLogger(__name__)
 
+# Lifetime energy totals fetched from getEnergyStatistics. These values should
+# never go backwards for the same installation; brief server-side reconnect /
+# rollover glitches can otherwise poison Home Assistant long-term statistics.
+CUMULATIVE_ENERGY_KEYS: Set[str] = {
+    "Total_Solar_Generation",
+    "Total_Feed_In",
+    "Total_Battery_Charge",
+    "Total_Battery_Discharge",
+    "PV_Power_House",
+    "PV_Charging_Battery",
+    "Total_House_Consumption",
+    "Grid_Based_Battery_Charge",
+    "Grid_Power_Consumption",
+}
+
+ENERGY_DECREASE_TOLERANCE_KWH = 0.001
+
 # Notification IDs
 NOTIFICATION_RECOVERY = "bytewatt_recovery"
 NOTIFICATION_ERROR = "bytewatt_error"
@@ -104,6 +121,61 @@ class ByteWattDataUpdateCoordinator(DataUpdateCoordinator):
             name="bytewatt",
             update_interval=timedelta(seconds=scan_interval),
         )
+
+    def _stabilize_cumulative_energy(self, battery_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Suppress transient drops in lifetime cumulative energy fields.
+
+        During nightly reconnects the Byte-Watt statistics endpoint can briefly
+        return incomplete or stale totals. Publishing those dips makes Home
+        Assistant's TOTAL_INCREASING statistics treat the later recovery as
+        genuine new energy. Keep the last good cumulative value until the API
+        catches back up.
+        """
+        if not self._last_battery_data:
+            return battery_data
+
+        stabilized = dict(battery_data)
+        for key in CUMULATIVE_ENERGY_KEYS:
+            previous = self._as_float(self._last_battery_data.get(key))
+            if previous is None:
+                continue
+
+            current = self._as_float(stabilized.get(key))
+            if current is None:
+                stabilized[key] = self._last_battery_data.get(key)
+                _LOGGER.debug(
+                    "Keeping cached cumulative energy value for missing %s: %s",
+                    key,
+                    previous,
+                )
+                continue
+
+            if current + ENERGY_DECREASE_TOLERANCE_KWH < previous:
+                stabilized[key] = self._last_battery_data.get(key)
+                _LOGGER.warning(
+                    "Ignoring transient decrease for %s: API reported %.3f kWh "
+                    "after %.3f kWh",
+                    key,
+                    current,
+                    previous,
+                )
+                self.diagnostic_service.log_diagnostic("energy_total_stabilized", {
+                    "key": key,
+                    "reported_value": current,
+                    "kept_value": previous,
+                })
+
+        return stabilized
+
+    @staticmethod
+    def _as_float(value: Any) -> Optional[float]:
+        """Return value as float, or None for missing/non-numeric values."""
+        if value is None or value == "":
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
 
     
     @contextmanager
@@ -186,6 +258,7 @@ class ByteWattDataUpdateCoordinator(DataUpdateCoordinator):
             
             # If we got battery data, update our cached version and last successful time
             if battery_data:
+                battery_data = self._stabilize_cumulative_energy(battery_data)
                 self._last_battery_data = battery_data
                 self._last_successful_update = current_time
                 self._consecutive_stale_checks = 0

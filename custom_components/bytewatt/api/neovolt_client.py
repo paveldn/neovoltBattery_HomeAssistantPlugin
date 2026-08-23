@@ -508,7 +508,12 @@ class NeovoltClient:
         """Get the authentication headers."""
         return {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.token}"
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/json, text/plain, */*",
+            "language": "en-US",
+            "operationDate": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "platform": "AK9D8H",
+            "System": "alphacloud",
         }
     
     async def _async_get(self, endpoint: str) -> Optional[Dict[str, Any]]:

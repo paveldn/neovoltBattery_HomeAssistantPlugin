@@ -41,7 +41,13 @@ from homeassistant.util import dt as dt_util
 
 from .api.settings import BatterySettingsAPI, GridFeedInSettingsAPI
 from .const import DEFAULT_CHARGE_POWER_W, signal_pending_changed
-from .models import ChargeSlot, CycleStrategy, GridFeedInSettings, GridFeedInSlot
+from .models import (
+    ChargeSlot,
+    CycleStrategy,
+    DischargeSlot,
+    GridFeedInSettings,
+    GridFeedInSlot,
+)
 from .utilities.time_utils import sanitize_time_format
 
 _LOGGER = logging.getLogger(__name__)
@@ -267,35 +273,39 @@ class SettingsManager:
     def feedin_slot_available(self, slot_index: int) -> bool:
         if slot_index in self._pending_feedin_slots:
             return True
-        return (
-            self._feedin_cache is not None
-            and slot_index < len(self._feedin_cache.slots)
-        )
+        # The Byte-Watt API can return the feed-in top-level settings with an
+        # empty slot list. The submit payload builder can create slots on edit,
+        # so keep the slot controls usable once the feed-in cache is loaded.
+        return self._feedin_cache is not None
 
     def _read_battery_from_cache(self, field: str, default: Any) -> Any:
         c = self._battery_cache
         if c is None:
             return default
+        charge_slot = c.charge_slots[0] if c.charge_slots else ChargeSlot(
+            charge_power=DEFAULT_CHARGE_POWER_W
+        )
+        discharge_slot = c.discharge_slots[0] if c.discharge_slots else DischargeSlot()
         if field == "minimum_soc":
             return c.bat_use_cap
         if field == "charge_cap":
-            return c.charge_slots[0].charge_limit if c.charge_slots else default
+            return charge_slot.charge_limit
         if field == "charge_start_time":
-            return c.charge_slots[0].begin_time if c.charge_slots else default
+            return charge_slot.begin_time
         if field == "charge_end_time":
-            return c.charge_slots[0].end_time if c.charge_slots else default
+            return charge_slot.end_time
         if field == "discharge_start_time":
-            return c.discharge_slots[0].begin_time if c.discharge_slots else default
+            return discharge_slot.begin_time
         if field == "discharge_end_time":
-            return c.discharge_slots[0].end_time if c.discharge_slots else default
+            return discharge_slot.end_time
         if field == "grid_charging":
             return bool(c.grid_charge_cycle)
         if field == "discharge_time_control":
             return bool(c.ctr_dis_cycle)
         if field == "charge_power":
-            return c.charge_slots[0].charge_power if c.charge_slots else default
+            return charge_slot.charge_power
         if field == "discharge_power":
-            return c.discharge_slots[0].charge_power if c.discharge_slots else default
+            return discharge_slot.charge_power
         return default
 
     # ------------------------------------------------------------------
@@ -710,9 +720,7 @@ class SettingsManager:
                     if slot_list_attr == "charge_slots":
                         slots.append(ChargeSlot(charge_power=DEFAULT_CHARGE_POWER_W))
                     else:
-                        raise SettingsValidationError(
-                            f"Cannot set {field_name}: no slot defined on the inverter"
-                        )
+                        slots.append(DischargeSlot())
                 setattr(slots[0], slot_attr, pending[field_name])
 
         if "charge_power" in pending:
@@ -721,7 +729,7 @@ class SettingsManager:
             merged.charge_slots[0].charge_power = int(pending["charge_power"])
         if "discharge_power" in pending:
             if not merged.discharge_slots:
-                raise SettingsValidationError("Cannot set discharge_power: no discharge slot")
+                merged.discharge_slots.append(DischargeSlot())
             merged.discharge_slots[0].charge_power = int(pending["discharge_power"])
 
         return merged
