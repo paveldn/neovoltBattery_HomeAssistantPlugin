@@ -91,6 +91,7 @@ class ByteWattDataUpdateCoordinator(DataUpdateCoordinator):
         self._heartbeat_unsub = None
         self._recovery_attempts = 0
         self._auto_reconnect_unsub = None
+        self._skip_settings_refresh_once = False
         # async_call_later unsubscribe for the post-failure recovery retry.
         # Tracked so we can cancel it on entry unload — otherwise the
         # callback would fire on a torn-down coordinator.
@@ -253,7 +254,10 @@ class ByteWattDataUpdateCoordinator(DataUpdateCoordinator):
             # The manager owns its lock so concurrent submit() / refresh() are serialized,
             # and per-batch failures are swallowed there — don't fail the poll on them.
             manager = self.hass.data.get(DOMAIN, {}).get(self.entry_id, {}).get("manager")
-            if manager is not None:
+            if self._skip_settings_refresh_once:
+                self._skip_settings_refresh_once = False
+                _LOGGER.debug("Skipping settings refresh during recovery probe")
+            elif manager is not None:
                 await manager.refresh()
             
             # If we got battery data, update our cached version and last successful time
@@ -513,7 +517,9 @@ class ByteWattDataUpdateCoordinator(DataUpdateCoordinator):
             "timestamp": recovery_start_ts.isoformat(),
         })
 
-        if self._notify_on_recovery:
+        notify_this_recovery = self._notify_on_recovery and not is_scheduled
+
+        if notify_this_recovery:
             async_create(
                 self.hass,
                 f"ByteWatt integration is attempting to reconnect ({recovery_type} recovery)",
@@ -532,6 +538,7 @@ class ByteWattDataUpdateCoordinator(DataUpdateCoordinator):
                 await self._reset_client()
 
             with self._timed_operation("refresh_data"):
+                self._skip_settings_refresh_once = True
                 await self.async_refresh()
 
             # Did the refresh actually succeed, or did _async_update_data fall
@@ -547,7 +554,7 @@ class ByteWattDataUpdateCoordinator(DataUpdateCoordinator):
                     "success": True,
                     "timestamp": dt_util.utcnow().isoformat(),
                 })
-                if self._notify_on_recovery:
+                if notify_this_recovery:
                     async_dismiss(self.hass, NOTIFICATION_RECOVERY)
                     async_create(
                         self.hass,
@@ -575,7 +582,7 @@ class ByteWattDataUpdateCoordinator(DataUpdateCoordinator):
             next_check_seconds = max(self._heartbeat_interval // backoff_factor, 30)
             _LOGGER.info("Will attempt recovery again in %ds", next_check_seconds)
 
-            if self._notify_on_recovery:
+            if notify_this_recovery:
                 async_create(
                     self.hass,
                     f"ByteWatt recovery attempt failed: {err}. "

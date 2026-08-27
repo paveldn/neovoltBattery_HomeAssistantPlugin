@@ -48,6 +48,8 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+LIVE_CONNECTION_STATUSES = {None, "connected"}
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -373,9 +375,23 @@ class ByteWattSensor(CoordinatorEntity, SensorEntity):
         }
 
     @property
+    def _has_live_connection(self) -> bool:
+        """Return True only when the latest coordinator update reached the API."""
+        if not self.coordinator.data:
+            return False
+        return self.coordinator.data.get("connection_status") in LIVE_CONNECTION_STATUSES
+
+    @property
+    def available(self) -> bool:
+        """Return if the latest state came from a live API connection."""
+        return self._has_live_connection
+
+    @property
     def native_value(self):
         """Return the state of the sensor."""
         try:
+            if not self.available:
+                return None
             if not self.coordinator.data or "battery" not in self.coordinator.data:
                 return None
             
@@ -438,6 +454,8 @@ class ByteWattGridSensor(ByteWattSensor):
     def native_value(self):
         """Return the state of the sensor."""
         try:
+            if not self.available:
+                return None
             if not self.coordinator.data or "battery" not in self.coordinator.data:
                 return None
             
@@ -465,6 +483,9 @@ class ByteWattGridSensor(ByteWattSensor):
     @property
     def available(self) -> bool:
         """Return if entity is available."""
+        if not self._has_live_connection:
+            return False
+
         # Many grid sensors may not be available in the new API
         if not self.coordinator.data or "battery" not in self.coordinator.data:
             return False
