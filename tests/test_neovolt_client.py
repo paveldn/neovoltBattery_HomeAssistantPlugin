@@ -38,6 +38,7 @@ encrypt_password = neovolt_auth.encrypt_password
 ByteWattAPIError = neovolt_client.ByteWattAPIError
 _stat_value = neovolt_client._stat_value
 _decode_json_object = neovolt_client._decode_json_object
+_live_power_sys_sn = neovolt_client._live_power_sys_sn
 
 
 def test_stat_value_returns_value_when_present():
@@ -52,6 +53,16 @@ def test_stat_value_coalesces_missing_key_to_zero():
 def test_stat_value_coalesces_explicit_none_to_zero():
     """The fragile arithmetic path used to crash on None — never again."""
     assert _stat_value({"epvtoday": None}, "epvtoday") == 0
+
+
+def test_live_power_uses_host_sys_sn_when_configured():
+    assert _live_power_sys_sn("REAL-SYS-SN") == "REAL-SYS-SN"
+
+
+def test_live_power_falls_back_to_all_without_host_sys_sn():
+    assert _live_power_sys_sn("") == "All"
+    assert _live_power_sys_sn("   ") == "All"
+    assert _live_power_sys_sn(None) == "All"
 
 
 def test_battery_discharged_today_calculation_survives_partial_data():

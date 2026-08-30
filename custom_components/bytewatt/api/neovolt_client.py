@@ -87,6 +87,13 @@ def _stat_value(stats_data, key):
         _LOGGER.debug("Non-numeric value for %s in stats response: %r", key, value)
         return 0
 
+
+def _live_power_sys_sn(host_sys_sn: Optional[str]) -> str:
+    """Return the sysSn to use for live power data."""
+    host_sys_sn = (host_sys_sn or "").strip()
+    return host_sys_sn or "All"
+
+
 class NeovoltClient:
     """API Client for Neovolt battery systems."""
     
@@ -258,7 +265,10 @@ class NeovoltClient:
         # First get the real-time power data — failures of THIS call raise.
         url = f"{self.base_url}/api/report/energyStorage/getLastPowerData"
 
-        params = {"sysSn": "All", "stationId": station_id or ""}
+        params = {
+            "sysSn": _live_power_sys_sn(self.host_sys_sn),
+            "stationId": station_id or "",
+        }
 
         current_date = dt_util.now().strftime("%Y-%m-%d %H:%M:%S")
         headers = self._get_auth_headers()

@@ -81,6 +81,9 @@ SENSOR_SELF_SUFFICIENCY = "self_sufficiency"
 SENSOR_TREES_PLANTED = "trees_planted"
 SENSOR_CO2_REDUCTION = "co2_reduction_tons"
 
+# Binary sensor types
+BINARY_SENSOR_OFF_GRID_MODE = "off_grid_mode"
+
 # Circuit breaker and connection constants
 MAX_DIAGNOSTIC_LOGS = 100
 RECENT_DATA_THRESHOLD = 300  # 5 minutes in seconds
