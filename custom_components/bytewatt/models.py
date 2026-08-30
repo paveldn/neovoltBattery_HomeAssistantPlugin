@@ -231,9 +231,40 @@ class CycleStrategy:
     raw_data: Dict[str, Any] = field(default_factory=dict)
     # Set by BatterySettingsAPI after fetch; used in to_dict() for the "id" field
     host_system_id: str = ""
+    format_source: str = "cycle_strategy"
 
     @classmethod
     def from_api_response(cls, data: Dict[str, Any]) -> "CycleStrategy":
+        if (
+            "timeChaf1" in data
+            or "timeChae1" in data
+            or "timeDisf1" in data
+            or "timeDise1" in data
+            or "gridCharge" in data
+        ):
+            charge_slot = ChargeSlot(
+                begin_time=_safe_str(data, "timeChaf1", "00:00"),
+                end_time=_safe_str(data, "timeChae1", "00:00"),
+                charge_limit=_safe_float(data, "batHighCap", 100.0),
+                charge_power=_safe_int(data, "chargePower", 8000),
+            )
+            discharge_slot = DischargeSlot(
+                begin_time=_safe_str(data, "timeDisf1", "00:00"),
+                end_time=_safe_str(data, "timeDise1", "00:00"),
+                charge_limit=_safe_float(data, "batUseCap", 10.0),
+                charge_power=_safe_int(data, "dischargePower", 10000),
+            )
+            return cls(
+                grid_charge_cycle=_safe_int(data, "gridCharge", 1),
+                ctr_dis_cycle=_safe_int(data, "ctrDis", 1),
+                bat_use_cap=_safe_float(data, "batUseCap", 10.0),
+                ups_reserve=_safe_int(data, "upsReserveEnable", 0),
+                charge_slots=[charge_slot],
+                discharge_slots=[discharge_slot],
+                raw_data=data,
+                format_source="charge_config",
+            )
+
         charge_slots = [
             ChargeSlot.from_api_response(s)
             for s in (data.get("dayChargeTimeList") or [])
@@ -268,6 +299,26 @@ class CycleStrategy:
         Pop the GET-side keys when echoing raw_data so they don't leak
         stale slot data into the PUT alongside our edits.
         """
+        if self.format_source == "charge_config":
+            result = dict(self.raw_data)
+            charge_slot = self.charge_slots[0] if self.charge_slots else ChargeSlot()
+            discharge_slot = (
+                self.discharge_slots[0] if self.discharge_slots else DischargeSlot()
+            )
+            result.update({
+                "id": self.host_system_id,
+                "gridCharge": self.grid_charge_cycle,
+                "timeChaf1": charge_slot.begin_time,
+                "timeChae1": charge_slot.end_time,
+                "ctrDis": self.ctr_dis_cycle,
+                "timeDisf1": discharge_slot.begin_time,
+                "timeDise1": discharge_slot.end_time,
+                "batUseCap": self.bat_use_cap,
+                "batHighCap": charge_slot.charge_limit,
+                "upsReserveEnable": self.ups_reserve,
+            })
+            return result
+
         result = dict(self.raw_data)
         result.pop("dayChargeTimeList", None)
         result.pop("dayDischargeTimeList", None)

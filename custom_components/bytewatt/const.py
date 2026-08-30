@@ -53,6 +53,8 @@ SENSOR_SOC = "soc"
 SENSOR_GRID_CONSUMPTION = "grid_consumption"
 SENSOR_HOUSE_CONSUMPTION = "house_consumption"
 SENSOR_BATTERY_POWER = "battery_power"
+SENSOR_BATTERY_CHARGING_POWER = "battery_charging_power"
+SENSOR_BATTERY_DISCHARGING_POWER = "battery_discharging_power"
 SENSOR_PV = "pv_power"
 SENSOR_LAST_UPDATE = "last_update"
 

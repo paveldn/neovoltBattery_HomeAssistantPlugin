@@ -63,7 +63,10 @@ Byte-Watt → ⋮ → Reconfigure.
 
 For Energy dashboard setup, use the cumulative kWh sensors rather than the
 instantaneous W sensors. `Battery Power` is useful for live views, but HA will
-not accept it as stored battery energy.
+not accept it as stored battery energy. It is signed: negative means the
+battery is charging, positive means it is discharging. If you build your own
+Riemann / utility-meter helpers from power values, use `Battery Charging Power`
+and `Battery Discharging Power` instead; both are positive-only.
 
 Recommended Energy entities:
 
@@ -180,6 +183,8 @@ After install, Settings → Devices & Services → Byte-Watt → Configure:
 | `pgrid` | Grid Consumption (W) |
 | `pload` | House Consumption (W) |
 | `pbat` | Battery Power (W) |
+| `pbat < 0` | Battery Charging Power (W, positive-only) |
+| `pbat > 0` | Battery Discharging Power (W, positive-only) |
 | `ppv` | PV Power (W) |
 | `soc` | Battery Percentage (%) |
 | `epvT` | Total Solar Generation (kWh) |

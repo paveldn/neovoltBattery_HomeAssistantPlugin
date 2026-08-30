@@ -33,10 +33,12 @@ async def _with_relogin(api_client: "NeovoltClient", op):
 
 
 class BatterySettingsAPI:
-    """Stateless transport for getCycleStrategy / setCycleStrategy."""
+    """Stateless transport for battery charge/discharge settings."""
 
     GET_ENDPOINT = "api/iterate/sysSet/getCycleStrategy?id="
     PUT_ENDPOINT = "api/iterate/sysSet/setCycleStrategy"
+    CHARGE_CONFIG_GET_ENDPOINT = "api/iterate/sysSet/getChargeConfigInfo?id="
+    CHARGE_CONFIG_POST_ENDPOINT = "api/iterate/sysSet/updateChargeConfigInfo"
 
     def __init__(self, api_client: "NeovoltClient") -> None:
         self._client = api_client
@@ -66,15 +68,39 @@ class BatterySettingsAPI:
         max_retries: int = DEFAULT_RETRIES,
         retry_delay: float = DEFAULT_RETRY_DELAY,
     ) -> Optional[CycleStrategy]:
-        endpoint = f"{self.GET_ENDPOINT}{self._host_id()}"
+        host_id = self._host_id()
+        endpoints = (
+            (f"{self.CHARGE_CONFIG_GET_ENDPOINT}{host_id}", "charge_config"),
+            (f"{self.GET_ENDPOINT}{host_id}", "cycle_strategy"),
+        )
+        for endpoint, source in endpoints:
+            settings = await self._fetch_from_endpoint(
+                endpoint, source, max_retries, retry_delay,
+            )
+            if settings is not None:
+                return settings
+
+        _LOGGER.debug("Battery settings fetch failed for all known endpoints")
+        return None
+
+    async def _fetch_from_endpoint(
+        self,
+        endpoint: str,
+        source: str,
+        max_retries: int,
+        retry_delay: float,
+    ) -> Optional[CycleStrategy]:
         for attempt in range(max_retries):
             response = await _with_relogin(self._client, lambda: self._client._async_get(endpoint))
             if response and response.get("code") == 200 and "data" in response:
                 settings = CycleStrategy.from_api_response(response["data"])
                 settings.host_system_id = self._host_id()
+                if source == "charge_config":
+                    settings.format_source = "charge_config"
                 _LOGGER.debug(
-                    "Fetched cycle strategy (id=%s): batUseCap=%.0f%%, "
+                    "Fetched battery settings via %s (id=%s): batUseCap=%.0f%%, "
                     "%d charge slot(s), %d discharge slot(s)",
+                    source,
                     self._host_id(),
                     settings.bat_use_cap,
                     len(settings.charge_slots),
@@ -82,8 +108,8 @@ class BatterySettingsAPI:
                 )
                 return settings
             _LOGGER.debug(
-                "Cycle strategy fetch attempt %d/%d returned: %s",
-                attempt + 1, max_retries, response,
+                "Battery settings fetch via %s attempt %d/%d returned: %s",
+                source, attempt + 1, max_retries, response,
             )
             if attempt < max_retries - 1:
                 await asyncio.sleep(retry_delay)
@@ -97,11 +123,17 @@ class BatterySettingsAPI:
     ) -> bool:
         payload = settings.to_dict()
         payload["id"] = self._host_id()
+        endpoint = self.PUT_ENDPOINT
+        method = self._client._async_put
+        if settings.format_source == "charge_config":
+            endpoint = self.CHARGE_CONFIG_POST_ENDPOINT
+            method = self._client._async_post
+
         for attempt in range(max_retries):
             response = await _with_relogin(
-                self._client, lambda: self._client._async_put(self.PUT_ENDPOINT, payload)
+                self._client, lambda: method(endpoint, payload)
             )
-            if response and response.get("code") == 200 and response.get("msg") == "Success":
+            if response and response.get("code") == 200:
                 return True
             # Code 9007 is a transient server-side network exception; retry with backoff
             if response and response.get("code") == 9007:

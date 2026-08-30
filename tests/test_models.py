@@ -135,6 +135,54 @@ def test_to_dict_field_set_matches_har_capture():
 
 
 # ---------------------------------------------------------------------------
+# CycleStrategy: getChargeConfigInfo fallback format
+# ---------------------------------------------------------------------------
+
+CHARGE_CONFIG_RESPONSE_SAMPLE = {
+    "gridCharge": 0,
+    "timeChaf1": "14:30",
+    "timeChae1": "16:00",
+    "ctrDis": 0,
+    "timeDisf1": "16:00",
+    "timeDise1": "06:00",
+    "batUseCap": 6,
+    "batHighCap": 100,
+    "upsReserveEnable": 1,
+    "chargeModeSetting": 0,
+}
+
+
+def test_from_charge_config_response_parses_battery_settings():
+    s = CycleStrategy.from_api_response(CHARGE_CONFIG_RESPONSE_SAMPLE)
+    assert s.format_source == "charge_config"
+    assert s.grid_charge_cycle == 0
+    assert s.ctr_dis_cycle == 0
+    assert s.bat_use_cap == 6
+    assert s.ups_reserve == 1
+    assert s.charge_slots[0].begin_time == "14:30"
+    assert s.charge_slots[0].end_time == "16:00"
+    assert s.charge_slots[0].charge_limit == 100
+    assert s.discharge_slots[0].begin_time == "16:00"
+    assert s.discharge_slots[0].end_time == "06:00"
+
+
+def test_charge_config_to_dict_preserves_endpoint_shape():
+    s = CycleStrategy.from_api_response(CHARGE_CONFIG_RESPONSE_SAMPLE)
+    s.host_system_id = "host-xyz"
+    s.bat_use_cap = 20
+    s.charge_slots[0].begin_time = "02:00"
+
+    payload = s.to_dict()
+
+    assert payload["id"] == "host-xyz"
+    assert payload["batUseCap"] == 20
+    assert payload["timeChaf1"] == "02:00"
+    assert payload["timeChae1"] == "16:00"
+    assert payload["timeDisf1"] == "16:00"
+    assert payload["timeDise1"] == "06:00"
+
+
+# ---------------------------------------------------------------------------
 # GridFeedInSettings: round-trip
 # ---------------------------------------------------------------------------
 

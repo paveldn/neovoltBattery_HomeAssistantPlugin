@@ -23,6 +23,8 @@ from .const import (
     SENSOR_GRID_CONSUMPTION,
     SENSOR_HOUSE_CONSUMPTION,
     SENSOR_BATTERY_POWER,
+    SENSOR_BATTERY_CHARGING_POWER,
+    SENSOR_BATTERY_DISCHARGING_POWER,
     SENSOR_PV,
     SENSOR_LAST_UPDATE,
     SENSOR_TOTAL_SOLAR,
@@ -99,6 +101,22 @@ async def async_setup_entry(
             "pbat", 
             UnitOfPower.WATT,
             "mdi:battery-charging"
+        ),
+        ByteWattBatteryFlowSensor(
+            coordinator,
+            entry,
+            SENSOR_BATTERY_CHARGING_POWER,
+            "Battery Charging Power",
+            "charging",
+            "mdi:battery-plus",
+        ),
+        ByteWattBatteryFlowSensor(
+            coordinator,
+            entry,
+            SENSOR_BATTERY_DISCHARGING_POWER,
+            "Battery Discharging Power",
+            "discharging",
+            "mdi:battery-minus",
         ),
         ByteWattSensor(
             coordinator, 
@@ -417,6 +435,41 @@ class ByteWattSensor(CoordinatorEntity, SensorEntity):
         except Exception as ex:
             _LOGGER.error(f"Error getting sensor state for {self._attr_name}: {ex}")
             return None
+
+
+class ByteWattBatteryFlowSensor(ByteWattSensor):
+    """Positive-only battery charge/discharge power derived from signed pbat."""
+
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator,
+        config_entry: ConfigEntry,
+        sensor_type: str,
+        name: str,
+        flow_type: str,
+        icon: str,
+    ) -> None:
+        super().__init__(
+            coordinator,
+            config_entry,
+            sensor_type,
+            name,
+            SensorDeviceClass.POWER,
+            "pbat",
+            UnitOfPower.WATT,
+            icon,
+        )
+        self._flow_type = flow_type
+
+    @property
+    def native_value(self):
+        """Return charge or discharge power as a positive W value."""
+        signed_power = super().native_value
+        if signed_power is None:
+            return None
+        if self._flow_type == "charging":
+            return max(-float(signed_power), 0.0)
+        return max(float(signed_power), 0.0)
 
 
 class ByteWattGridSensor(ByteWattSensor):
